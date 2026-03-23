@@ -102,6 +102,7 @@ pnpm install
 
 ### Restricted or offline environments
 
+This repository expects real package installation from the npm registry. In restricted environments where package installation is blocked, the CLI may not build or run until dependencies can be installed.
 This repository may be evaluated in environments where external package installation is blocked. In those cases:
 
 - `package.json` still declares the intended dependencies.
