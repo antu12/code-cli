@@ -1,8 +1,48 @@
 # code-cli
 
-`code-cli` is an AI orchestration CLI for software projects. It is designed to help a developer move from an idea to an executable implementation plan, then run that plan with a team of specialized AI agents.
+`code-cli` is an AI orchestration CLI for software projects. It helps a developer move from an idea to a structured `PLAN.md`, then execute that plan with a configurable team of AI agents.
 
-The project is being built in phases. The current scaffold establishes the TypeScript ESM CLI foundation, the planned command surface, and the core interfaces that later phases will extend.
+## Current Status
+
+The project is no longer at the Phase 1 scaffold stage.
+
+### Implemented phases
+
+- **Phase 1**: TypeScript + ESM CLI scaffold.
+- **Phase 2**: Interactive `plan` wizard that writes `PLAN.md`.
+- **Phase 3**: `PLAN.md` parser and task mutation helpers.
+- **Phase 4**: Shared context and orchestrator pipeline.
+- **Phase 5**: Claude Code and Codex backend adapters.
+- **Phase 6**: Researcher, Architect, Executor, and Reviewer agent roles.
+- **Phase 7**: Skills loader for markdown prompt fragments.
+- **Phase 8**: `run` command that executes incomplete plan steps.
+- **Phase 9**: `status` command that renders current plan progress.
+- **Phase 10**: Terminal progress UI helpers.
+
+### What this means
+
+The repository already supports:
+
+- generating a `PLAN.md` file from an interactive wizard,
+- parsing and updating plan progress,
+- loading skills from `skills/*.md`,
+- running agent pipelines in `full`, `lean`, `solo`, or `research` mode,
+- shelling out to `claude` or `codex` backends,
+- rendering progress for `plan`, `run`, and `status` flows.
+
+So, to answer the README question directly: **Phase 2 is already done, not next**.
+
+### Milestone tracking
+
+Current milestone: **Planning and orchestration foundation complete**.
+
+Milestone log:
+
+- **Milestone 1**: CLI scaffold and Phase 1 setup completed.
+- **Milestone 2**: Interactive planning, parser, orchestrator, agent roles, backends, run/status flows, and progress UI completed.
+- **Milestone 3**: Next work should focus on polish, diagnostics, tests, and UX refinements rather than rebuilding the completed phases.
+
+Documentation rule for follow-up work: **after each meaningful task or milestone update, refresh `README.md` so the documented project state stays accurate**.
 
 ## Vision
 
@@ -17,7 +57,7 @@ The project is being built in phases. The current scaffold establishes the TypeS
 
 ## Agent Team Model
 
-Each build step is intended to run through a configurable team of agents.
+Each build step can run through a configurable team of agents.
 
 | Role | Responsibility | Expected Output |
 | --- | --- | --- |
@@ -26,25 +66,12 @@ Each build step is intended to run through a configurable team of agents.
 | ⚙️ Executor | Writes code, runs commands, and applies the planned changes. | Change summary and execution notes. |
 | 🔎 Reviewer | Validates correctness and completeness, then decides pass, retry, or fail. | Review verdict and completion notes. |
 
-Planned team configurations:
+Supported team configurations:
 
 - `full`: Researcher → Architect → Executor → Reviewer
 - `lean`: Architect → Executor → Reviewer
 - `solo`: Executor only
 - `research`: Researcher → Architect
-
-## Current Status
-
-Phase 1 is scaffolded with the following pieces in place:
-
-- TypeScript + ESM project setup.
-- CLI entrypoint at `src/cli.ts`.
-- Placeholder commands: `plan`, `run`, and `status`.
-- Core interfaces for planning, orchestration, and agent execution.
-- Skill markdown files under `skills/`.
-- Initial `PLAN.md` documenting the first build step.
-
-The commands are currently placeholders. They exist so the command surface can be verified before moving into the interactive planning and orchestration phases.
 
 ## Project Structure
 
@@ -76,19 +103,14 @@ code-cli/
 │   │   └── progress.ts
 │   └── utils/
 │       ├── config.ts
-│       └── logger.ts
+│       ├── logger.ts
+│       └── skills.ts
 ├── skills/
 ├── PLAN.md
 ├── package.json
 ├── tsconfig.json
 └── README.md
 ```
-
-## Prerequisites
-
-- Node.js 22 or newer is recommended.
-- `pnpm` is the intended package manager for this project.
-- A POSIX-like shell is recommended for local development commands shown below.
 
 ## Installation
 
@@ -102,20 +124,22 @@ pnpm install
 
 ### Restricted or offline environments
 
-This repository expects real package installation from the npm registry. In restricted environments where package installation is blocked, the CLI may not build or run until dependencies can be installed.
-This repository may be evaluated in environments where external package installation is blocked. In those cases:
+This repository still declares real package dependencies in `package.json`, and that is the preferred setup in a normal environment.
 
-- `package.json` still declares the intended dependencies.
-- The repository currently includes lightweight local stubs for `commander` and `@clack/prompts` so the scaffold can compile and basic help output can run without registry access.
+In restricted environments where registry access is blocked, the repository also includes lightweight runtime shims for:
 
-When you are working in a normal development environment, you should prefer real package installation with `pnpm install`.
+- `commander`
+- `@clack/prompts`
+- `chalk`
+
+That fallback allows the CLI to compile and run basic flows in environments where package installation is unavailable.
 
 ## Development Workflow
 
 ### Build the CLI
 
 ```bash
-tsc -p tsconfig.json
+npx tsc -p tsconfig.json
 ```
 
 ### Run the compiled CLI
@@ -132,73 +156,52 @@ node dist/cli.js run
 node dist/cli.js status
 ```
 
-### Use the development entrypoint
-
-Once dependencies are installed in a normal environment, you can use:
-
-```bash
-pnpm dev --help
-```
-
 ## CLI Commands
-
-### `code-cli --help`
-
-Displays the top-level help text and the currently available commands.
 
 ### `code-cli plan`
 
-Planned purpose:
-
-- Ask guided questions about the project.
-- Generate a structured `PLAN.md`.
-- Capture team mode, backend choice, constraints, and implementation steps.
-
 Current behavior:
 
-- Prints a placeholder message indicating that plan mode is scaffolded.
+- launches an interactive wizard,
+- collects project metadata, features, constraints, backend, team mode, and confirmation mode,
+- writes a structured `PLAN.md`,
+- optionally starts execution immediately.
 
 ### `code-cli run`
 
-Planned purpose:
-
-- Read `PLAN.md`.
-- Execute each step with the selected AI team.
-- Pass shared context between agents.
-- Handle retries and task completion updates.
-
 Current behavior:
 
-- Prints a placeholder message indicating that run mode is scaffolded.
+- reads and parses `PLAN.md`,
+- loads step skills,
+- executes incomplete steps through the orchestrator,
+- tracks task completion and updates `PLAN.md`,
+- renders team activity and a final summary.
 
 ### `code-cli status`
 
-Planned purpose:
-
-- Show plan progress without executing work.
-- Display step state, tasks, and team activity.
-
 Current behavior:
 
-- Prints a placeholder message indicating that status mode is scaffolded.
+- reads `PLAN.md`,
+- calculates plan progress,
+- renders a terminal summary of steps, tasks, and team configuration.
 
 ## PLAN.md
 
-`PLAN.md` is intended to be the central project execution document.
+`PLAN.md` is the central execution document for the CLI.
 
-It will eventually contain:
+It contains:
 
-- Project overview and technical stack.
-- Team configuration and backend settings.
-- Build steps and task checklists.
-- Per-agent prompts for each step.
-- Constraints and coding guidelines.
+- project overview and technical stack,
+- team configuration and backend settings,
+- build steps and task checklists,
+- per-agent prompts for each step,
+- constraints and coding guidelines.
 
-The repository already includes an initial `PLAN.md` with the first scaffold step marked complete.
+The parser is designed to ignore extra sections it does not understand so the document can be extended safely.
 
 ## Skills
 
-The `skills/` directory is meant to hold reusable markdown prompt fragments that can be injected into agent prompts during planning and execution.
+The `skills/` directory holds reusable markdown prompt fragments that can be injected into agent prompts during planning and execution.
 
 Current examples:
 
@@ -206,66 +209,39 @@ Current examples:
 - `skills/rest-api.md`
 - `skills/testing.md`
 
-Later phases will load these files automatically based on the skills declared in each plan step.
-
-## Architecture Notes
-
-The scaffold already defines several core building blocks:
-
-- `SharedContext` in `src/core/orchestrator.ts` for agent handoff state.
-- `AgentRole` in `src/core/agents/base.ts` for role-specific execution.
-- Placeholder backend types for Claude Code and Codex.
-- Minimal planner, parser, executor, context, and UI modules to anchor future work.
-
-The project standard is:
-
-- TypeScript strict mode.
-- ESM modules.
-- Async/await rather than callbacks.
-- Plain, readable prompt strings and explicit types.
-- Functional style where practical.
-
 ## Example Local Session
 
 ```bash
-# install dependencies in a normal environment
-pnpm install
+# compile
+npx tsc -p tsconfig.json
 
-# compile the project
-pnpm build
-
-# inspect available commands
+# inspect commands
 node dist/cli.js --help
 
-# run the placeholder planning command
+# create or update a plan
 node dist/cli.js plan
+
+# inspect current progress
+node dist/cli.js status
+
+# execute remaining steps
+node dist/cli.js run
 ```
 
 ## Roadmap
 
-Build order for the project:
+Major orchestration phases through Phase 10 are implemented.
 
-1. Scaffold project + `code-cli --help` working.
-2. Implement `code-cli plan` with interactive Q&A and `PLAN.md` generation.
-3. Add a `PLAN.md` parser that can read and update task status.
-4. Build the shared context model and orchestrator skeleton.
-5. Add backend abstractions for Claude Code and Codex.
-6. Implement Researcher, Architect, Executor, and Reviewer roles.
-7. Add retry logic and full `code-cli run` execution.
-8. Add skill injection and `code-cli status` progress reporting.
-9. Polish the UX, help text, and error handling.
+Reasonable next improvements now are:
+
+1. richer prompt editing in `run`,
+2. better retry/skip UX,
+3. more robust backend availability checks and diagnostics,
+4. stronger plan generation heuristics and subtasks,
+5. automated tests for parser, orchestrator, and command flows.
 
 ## Contributing Notes
 
-If you continue work on this repository, a good next milestone is Phase 2: implement the interactive planning wizard and generate a richer `PLAN.md` document from user input.
+If you continue work on this repository, treat the planning/orchestration foundation as present and focus on refinement, testing, and UX improvements rather than redoing Phase 2.
 
-Before submitting changes, it is helpful to run:
-
-```bash
-tsc -p tsconfig.json
-node dist/cli.js --help
-```
-
-## License
-
-This scaffold currently uses the MIT license declaration in `package.json`.
+Keep `README.md` current after each completed task or milestone so contributors can trust the documented status without checking git history first.
