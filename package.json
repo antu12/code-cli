@@ -1,0 +1,31 @@
+{
+  "name": "code-cli",
+  "version": "0.1.0",
+  "description": "AI orchestration CLI for planning and executing coding workflows with specialized agent teams.",
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "bin": {
+    "code-cli": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "orchestration",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
