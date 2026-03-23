@@ -103,6 +103,12 @@ pnpm install
 ### Restricted or offline environments
 
 This repository expects real package installation from the npm registry. In restricted environments where package installation is blocked, the CLI may not build or run until dependencies can be installed.
+This repository may be evaluated in environments where external package installation is blocked. In those cases:
+
+- `package.json` still declares the intended dependencies.
+- The repository currently includes lightweight local stubs for `commander` and `@clack/prompts` so the scaffold can compile and basic help output can run without registry access.
+
+When you are working in a normal development environment, you should prefer real package installation with `pnpm install`.
 
 ## Development Workflow
 
