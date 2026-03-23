@@ -1,5 +1,6 @@
 export interface PlanningAnswers {
   projectName: string;
+  projectDir: string;
   description: string;
   language: string;
   framework: string;

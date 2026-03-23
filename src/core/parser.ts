@@ -23,6 +23,9 @@ export interface ParsedStep {
 export interface ParsedPlan {
   name: string;
   overview: string;
+  workspace: {
+    rootDir: string;
+  };
   techStack: Record<string, string>;
   teamConfig: {
     mode: string;
@@ -34,9 +37,13 @@ export interface ParsedPlan {
 
 const DEFAULT_PLAN_FILE = 'PLAN.md';
 
+function normalizeLineEndings(markdown: string): string {
+  return markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
 function sectionContent(markdown: string, heading: string): string {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`^## ${escaped}\\n([\\s\\S]*?)(?=^## |$)`, 'm');
+  const regex = new RegExp(`(?:^|\\n)## ${escaped}\\n([\\s\\S]*?)(?=\\n## |$)`);
   return regex.exec(markdown)?.[1]?.trim() ?? '';
 }
 
@@ -65,7 +72,7 @@ function parseSkills(raw: string): string[] {
 
 function parseAgentPrompts(stepBlock: string): ParsedStep['agentPrompts'] {
   const promptMap: ParsedStep['agentPrompts'] = {};
-  const agentTeamMatch = /\*\*Agent Team\*\*:\n([\s\S]*?)(?=\n\*\*Tasks\*\*:|$)/.exec(stepBlock);
+  const agentTeamMatch = /\*\*Agent Team\*\*:\r?\n([\s\S]*?)(?=\r?\n\*\*Tasks\*\*:|$)/.exec(stepBlock);
 
   if (!agentTeamMatch) {
     return promptMap;
@@ -86,7 +93,7 @@ function parseAgentPrompts(stepBlock: string): ParsedStep['agentPrompts'] {
 }
 
 function parseTasks(stepBlock: string): ParsedTask[] {
-  const tasksMatch = /\*\*Tasks\*\*:\n([\s\S]*?)$/.exec(stepBlock);
+  const tasksMatch = /\*\*Tasks\*\*:\r?\n([\s\S]*?)$/.exec(stepBlock);
   if (!tasksMatch) {
     return [];
   }
@@ -147,17 +154,22 @@ function parseSteps(markdown: string): ParsedStep[] {
 }
 
 export async function readPlan(planFile = DEFAULT_PLAN_FILE): Promise<ParsedPlan> {
-  const markdown = await readFile(planFile, 'utf8');
+  const markdown = normalizeLineEndings(await readFile(planFile, 'utf8'));
   const name = /^# Project Plan:\s+(.+)$/m.exec(markdown)?.[1]?.trim() ?? 'Untitled';
   const overview = sectionContent(markdown, 'Overview');
+  const workspaceSection = sectionContent(markdown, 'Workspace');
   const techStackSection = sectionContent(markdown, 'Tech Stack');
   const teamConfigSection = sectionContent(markdown, 'Team Config');
+  const workspaceMap = parseBulletMap(workspaceSection);
   const techStack = parseBulletMap(techStackSection);
   const teamConfigMap = parseBulletMap(teamConfigSection);
 
   return {
     name,
     overview,
+    workspace: {
+      rootDir: workspaceMap['Root Directory'] ?? process.cwd()
+    },
     techStack,
     teamConfig: {
       mode: teamConfigMap.Mode ?? 'full',
@@ -172,7 +184,7 @@ async function updatePlanContent(
   updater: (current: string) => string | null,
   planFile = DEFAULT_PLAN_FILE
 ): Promise<void> {
-  const current = await readFile(planFile, 'utf8');
+  const current = normalizeLineEndings(await readFile(planFile, 'utf8'));
   const next = updater(current);
   if (next !== null && next !== current) {
     await writeFile(planFile, next, 'utf8');

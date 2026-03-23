@@ -48,3 +48,16 @@ test('updateAgentPrompt persists prompt changes that are parsed back correctly',
   const markdown = await readFile(planFile, 'utf8');
   assert.match(markdown, /- 🔍 Researcher: "Review \\"quoted\\" cases and keep original casing"/);
 });
+
+test('readPlan parses team config correctly from CRLF PLAN.md files', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'code-cli-parser-crlf-'));
+  const planFile = join(dir, 'PLAN.md');
+  const crlfPlan = samplePlan.replace(/\n/g, '\r\n').replace('- Agent Backend: claude-code', '- Agent Backend: codex').replace('- Confirmation: per-step', '- Confirmation: auto');
+
+  await writeFile(planFile, crlfPlan, 'utf8');
+
+  const plan = await readPlan(planFile);
+  assert.equal(plan.teamConfig.agent, 'codex');
+  assert.equal(plan.teamConfig.confirmationMode, 'auto');
+  assert.equal(plan.teamConfig.mode, 'full');
+});

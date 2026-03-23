@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getAvailabilityCommand } from '../src/core/agents/backends/availability.ts';
+import { getAvailabilityCommand, resolveExecutablePath } from '../src/core/agents/backends/availability.ts';
 
 test('getAvailabilityCommand uses where.exe on Windows', () => {
   assert.deepEqual(getAvailabilityCommand('codex', 'win32'), {
@@ -15,4 +15,12 @@ test('getAvailabilityCommand uses which on POSIX platforms', () => {
     file: 'which',
     args: ['claude']
   });
+});
+
+test('resolveExecutablePath prefers explicit environment override', async () => {
+  const resolved = await resolveExecutablePath('codex', {
+    CODEX_CLI_PATH: 'C:\\tools\\codex.exe'
+  });
+
+  assert.equal(resolved, 'C:\\tools\\codex.exe');
 });

@@ -15,6 +15,7 @@ export interface AgentMessage {
 
 export interface SharedContext {
   stepGoal: string;
+  workspaceDir: string;
   techStack: Record<string, string>;
   skills: string[];
   researchOutput?: string;
@@ -48,6 +49,7 @@ function historyEntry(role: string, content: string): AgentMessage {
 function createSharedContext(step: ParsedStep, plan: ParsedPlan, config: AIOConfig, skillsContent: string): SharedContext {
   return {
     stepGoal: step.goal,
+    workspaceDir: config.workspaceDir,
     techStack: plan.techStack,
     skills: skillsContent ? [skillsContent] : [],
     attempt: 1,
@@ -102,10 +104,15 @@ export class Orchestrator {
       }
 
       this.events.onAgentStart?.(role, current);
-      if (role === 'researcher') current = await researcher.run(current, step);
-      if (role === 'architect') current = await architect.run(current, step);
-      if (role === 'executor') current = await executor.run(current, step);
-      if (role === 'reviewer') current = await reviewer.run(current, step);
+      try {
+        if (role === 'researcher') current = await researcher.run(current, step);
+        if (role === 'architect') current = await architect.run(current, step);
+        if (role === 'executor') current = await executor.run(current, step);
+        if (role === 'reviewer') current = await reviewer.run(current, step);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`${role} failed: ${message}`);
+      }
       const content = current.reviewerNotes ?? current.executorOutput ?? current.architectOutput ?? current.researchOutput ?? '';
       current.history = [...current.history, historyEntry(role, content)];
       this.events.onAgentComplete?.(role, current);

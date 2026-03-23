@@ -11,6 +11,7 @@ export interface AIOConfig {
   planFile: string;
   skillsDir: string;
   maxAttempts: number;
+  workspaceDir: string;
 }
 
 export const defaultConfig: AIOConfig = {
@@ -19,7 +20,8 @@ export const defaultConfig: AIOConfig = {
   confirmationMode: 'per-step',
   planFile: 'PLAN.md',
   skillsDir: './skills',
-  maxAttempts: 2
+  maxAttempts: 2,
+  workspaceDir: process.cwd()
 };
 
 export async function loadConfig(configFile = '.aiorc.json'): Promise<AIOConfig> {

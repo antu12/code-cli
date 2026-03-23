@@ -25,6 +25,7 @@ The project is no longer at the Phase 1 scaffold stage.
 The repository already supports:
 
 - generating a `PLAN.md` file from an interactive wizard,
+- generating descriptive delivery phases from requirements using AI-assisted planning with a structured fallback,
 - parsing and updating plan progress,
 - loading skills from `skills/*.md`,
 - editing and persisting per-agent prompts in `PLAN.md`,
@@ -114,9 +115,11 @@ code-cli/
 │       └── skills.ts
 ├── test/
 │   ├── availability.test.mjs
-│   └── parser.test.mjs
+│   ├── parser.test.mjs
+│   └── planner.test.mjs
 ├── skills/
 ├── PLAN.md
+├── .aiorc.json
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -143,7 +146,7 @@ The source tree includes lightweight ambient type declarations in `src/types.d.t
 ### Build the CLI
 
 ```bash
-npx tsc -p tsconfig.json
+npm run build
 ```
 
 ### Run tests
@@ -154,10 +157,16 @@ npm test
 
 This uses `node --test --test-isolation=none`, which avoids subprocess isolation and works better in restricted sandboxes.
 
+### Run in development
+
+```bash
+npm run dev
+```
+
 ### Run the compiled CLI
 
 ```bash
-node dist/cli.js --help
+npm start -- --help
 ```
 
 ### Run commands
@@ -175,7 +184,10 @@ node dist/cli.js status
 Current behavior:
 
 - launches an interactive wizard,
+- asks where the target project should be developed,
 - collects project metadata, features, constraints, backend, team mode, and confirmation mode,
+- uses the selected backend to expand requirements into descriptive software-delivery steps when available,
+- falls back to heuristic step generation that still groups work into clearer phases,
 - writes a structured `PLAN.md`,
 - optionally starts execution immediately.
 
@@ -184,6 +196,8 @@ Current behavior:
 Current behavior:
 
 - reads and parses `PLAN.md`,
+- shows the active workspace directory before execution,
+- writes a lightweight `RUN_STATUS.md` progress hook with the latest completed work and next step,
 - loads step skills,
 - uses per-step prompt overrides stored in `PLAN.md`,
 - supports editing persisted step prompts before execution,
@@ -216,6 +230,10 @@ It contains:
 
 The parser is designed to ignore extra sections it does not understand so the document can be extended safely.
 
+The planning flow now aims to produce implementation phases such as project foundation, API/services, authentication, reporting, UI delivery, and release readiness instead of mirroring each raw feature string as its own step.
+
+Runtime defaults can be overridden with `.aiorc.json`, including the backend, team mode, confirmation mode, plan file path, skills directory, and retry count.
+
 ## Skills
 
 The `skills/` directory holds reusable markdown prompt fragments that can be injected into agent prompts during planning and execution.
@@ -230,22 +248,25 @@ Current examples:
 
 ```bash
 # compile
-npx tsc -p tsconfig.json
+npm run build
 
 # run regression checks
 npm test
 
+# run from source during development
+npm run dev -- --help
+
 # inspect commands
-node dist/cli.js --help
+npm start -- --help
 
 # create or update a plan
-node dist/cli.js plan
+npm start -- plan
 
 # inspect current progress
-node dist/cli.js status
+npm start -- status
 
 # execute remaining steps
-node dist/cli.js run
+npm start -- run
 ```
 
 ## Roadmap
@@ -257,7 +278,7 @@ Reasonable next improvements now are:
 1. richer multi-line prompt editing in `run`,
 2. better retry/skip UX and clearer abort handling,
 3. explicit backend preflight diagnostics surfaced from CLI commands,
-4. stronger plan generation heuristics and subtasks,
+4. stronger plan generation heuristics, better requirement clustering, and richer task detail,
 5. broader end-to-end and orchestrator command coverage.
 
 ## Contributing Notes

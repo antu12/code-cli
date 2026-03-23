@@ -29,7 +29,7 @@ export function createArchitectAgent({ backend }: AgentDependencies): AgentRole 
   return {
     role: 'architect',
     async run(context: SharedContext, step: ParsedStep): Promise<SharedContext> {
-      const output = await backend.run(buildPrompt(context, step));
+      const output = await backend.run(buildPrompt(context, step), { cwd: context.workspaceDir });
       return { ...context, architectOutput: output };
     }
   };

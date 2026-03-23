@@ -59,6 +59,12 @@ declare module 'node:fs/promises' {
   export function readFile(path: string, encoding: string): Promise<string>;
   export function writeFile(path: string, data: string, encoding?: string): Promise<void>;
   export function access(path: string): Promise<void>;
+  export function mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
+}
+
+declare module 'node:fs' {
+  export function existsSync(path: string): boolean;
+  export function readdirSync(path: string): string[];
 }
 
 declare module 'node:child_process' {
@@ -72,7 +78,7 @@ declare module 'node:child_process' {
   export function execFile(
     file: string,
     args?: string[],
-    options?: { timeout?: number; maxBuffer?: number; env?: Record<string, string | undefined> },
+    options?: { cwd?: string; timeout?: number; maxBuffer?: number; env?: Record<string, string | undefined> },
     callback?: (error: ExecFileException | null, stdout: string, stderr: string) => void
   ): void;
 }

@@ -37,7 +37,7 @@ export function createResearcherAgent({ backend }: AgentDependencies): AgentRole
   return {
     role: 'researcher',
     async run(context: SharedContext, step: ParsedStep): Promise<SharedContext> {
-      const output = await backend.run(buildPrompt(context, step));
+      const output = await backend.run(buildPrompt(context, step), { cwd: context.workspaceDir });
       return { ...context, researchOutput: output };
     }
   };

@@ -2,6 +2,38 @@ import type { ParsedStep } from '../parser.js';
 import type { SharedContext } from '../orchestrator.js';
 import type { AgentDependencies, AgentRole } from './base.js';
 
+function coerceText(value: unknown, fallback: string): string {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    const entries = value
+      .map((item) => (typeof item === 'string' ? item.trim() : JSON.stringify(item)))
+      .filter(Boolean);
+
+    return entries.length > 0 ? entries.join(' | ') : fallback;
+  }
+
+  if (value !== undefined && value !== null) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return fallback;
+}
+
+function normalizeTaskIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => String(item).trim()).filter(Boolean);
+}
+
 function defaultPrompt(context: SharedContext, step: ParsedStep): string {
   return [
     '## Your Role: Reviewer',
@@ -35,17 +67,19 @@ export function createReviewerAgent({ backend }: AgentDependencies): AgentRole {
   return {
     role: 'reviewer',
     async run(context: SharedContext, step: ParsedStep): Promise<SharedContext> {
-      const output = await backend.run(buildPrompt(context, step));
+      const output = await backend.run(buildPrompt(context, step), { cwd: context.workspaceDir });
       let verdict: 'pass' | 'retry' | 'fail' = 'fail';
       let notes = 'Reviewer returned invalid JSON.';
       let tasksCompleted: string[] = [];
       try {
-        const parsed = JSON.parse(output) as { verdict: 'pass' | 'retry' | 'fail'; notes?: string; tasks_completed?: string[] };
-        verdict = parsed.verdict;
-        notes = parsed.notes ?? '';
-        tasksCompleted = parsed.tasks_completed ?? [];
+        const parsed = JSON.parse(output) as { verdict?: unknown; notes?: unknown; tasks_completed?: unknown };
+        if (parsed.verdict === 'pass' || parsed.verdict === 'retry' || parsed.verdict === 'fail') {
+          verdict = parsed.verdict;
+        }
+        notes = coerceText(parsed.notes, notes);
+        tasksCompleted = normalizeTaskIds(parsed.tasks_completed);
       } catch {
-        // keep defaults
+        notes = coerceText(output, notes);
       }
       return {
         ...context,

@@ -32,7 +32,7 @@ export function createExecutorAgent({ backend }: AgentDependencies): AgentRole {
   return {
     role: 'executor',
     async run(context: SharedContext, step: ParsedStep): Promise<SharedContext> {
-      const output = await backend.run(buildPrompt(context, step));
+      const output = await backend.run(buildPrompt(context, step), { cwd: context.workspaceDir });
       return { ...context, executorOutput: output };
     }
   };
