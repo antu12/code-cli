@@ -9,7 +9,7 @@ function summarizeHistory(context: SharedContext): string {
   return context.history.map((entry) => `- ${entry.role}: ${entry.content}`).join('\n');
 }
 
-function buildPrompt(context: SharedContext): string {
+function defaultPrompt(context: SharedContext): string {
   return [
     '## Your Role: Researcher',
     '## Step Goal',
@@ -29,11 +29,15 @@ function buildPrompt(context: SharedContext): string {
   ].join('\n');
 }
 
+function buildPrompt(context: SharedContext, step: ParsedStep): string {
+  return step.agentPrompts.researcher?.trim() || defaultPrompt(context);
+}
+
 export function createResearcherAgent({ backend }: AgentDependencies): AgentRole {
   return {
     role: 'researcher',
-    async run(context: SharedContext, _step: ParsedStep): Promise<SharedContext> {
-      const output = await backend.run(buildPrompt(context));
+    async run(context: SharedContext, step: ParsedStep): Promise<SharedContext> {
+      const output = await backend.run(buildPrompt(context, step));
       return { ...context, researchOutput: output };
     }
   };

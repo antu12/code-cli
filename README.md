@@ -18,6 +18,7 @@ The project is no longer at the Phase 1 scaffold stage.
 - **Phase 8**: `run` command that executes incomplete plan steps.
 - **Phase 9**: `status` command that renders current plan progress.
 - **Phase 10**: Terminal progress UI helpers.
+- **Phase 11**: Prompt persistence, confirmation-mode polish, cross-platform backend detection, and lightweight regression tests.
 
 ### What this means
 
@@ -26,21 +27,26 @@ The repository already supports:
 - generating a `PLAN.md` file from an interactive wizard,
 - parsing and updating plan progress,
 - loading skills from `skills/*.md`,
+- editing and persisting per-agent prompts in `PLAN.md`,
 - running agent pipelines in `full`, `lean`, `solo`, or `research` mode,
+- honoring `per-step`, `per-agent`, and `auto` confirmation modes during execution,
+- checking backend availability in a cross-platform way,
 - shelling out to `claude` or `codex` backends,
-- rendering progress for `plan`, `run`, and `status` flows.
+- rendering progress for `plan`, `run`, and `status` flows,
+- running focused regression tests with the built-in Node test runner.
 
 So, to answer the README question directly: **Phase 2 is already done, not next**.
 
 ### Milestone tracking
 
-Current milestone: **Planning and orchestration foundation complete**.
+Current milestone: **Planning and orchestration foundation plus prompt and verification polish complete**.
 
 Milestone log:
 
 - **Milestone 1**: CLI scaffold and Phase 1 setup completed.
 - **Milestone 2**: Interactive planning, parser, orchestrator, agent roles, backends, run/status flows, and progress UI completed.
-- **Milestone 3**: Next work should focus on polish, diagnostics, tests, and UX refinements rather than rebuilding the completed phases.
+- **Milestone 3**: Prompt persistence, confirmation-mode support, cross-platform backend detection, and regression coverage completed.
+- **Milestone 4**: Next work should focus on UX depth, diagnostics, and broader test coverage rather than rebuilding the completed phases.
 
 Documentation rule for follow-up work: **after each meaningful task or milestone update, refresh `README.md` so the documented project state stays accurate**.
 
@@ -96,6 +102,7 @@ code-cli/
 │   │       ├── executor.ts
 │   │       ├── reviewer.ts
 │   │       └── backends/
+│   │           ├── availability.ts
 │   │           ├── claudeCode.ts
 │   │           └── codex.ts
 │   ├── ui/
@@ -105,6 +112,9 @@ code-cli/
 │       ├── config.ts
 │       ├── logger.ts
 │       └── skills.ts
+├── test/
+│   ├── availability.test.mjs
+│   └── parser.test.mjs
 ├── skills/
 ├── PLAN.md
 ├── package.json
@@ -124,15 +134,9 @@ pnpm install
 
 ### Restricted or offline environments
 
-This repository still declares real package dependencies in `package.json`, and that is the preferred setup in a normal environment.
+This repository declares real package dependencies in `package.json`, and normal development still expects `pnpm install`.
 
-In restricted environments where registry access is blocked, the repository also includes lightweight runtime shims for:
-
-- `commander`
-- `@clack/prompts`
-- `chalk`
-
-That fallback allows the CLI to compile and run basic flows in environments where package installation is unavailable.
+The source tree includes lightweight ambient type declarations in `src/types.d.ts` so the codebase remains easier to inspect in constrained environments, but building and running the full CLI still depends on the declared packages and a local TypeScript installation.
 
 ## Development Workflow
 
@@ -141,6 +145,14 @@ That fallback allows the CLI to compile and run basic flows in environments wher
 ```bash
 npx tsc -p tsconfig.json
 ```
+
+### Run tests
+
+```bash
+npm test
+```
+
+This uses `node --test --test-isolation=none`, which avoids subprocess isolation and works better in restricted sandboxes.
 
 ### Run the compiled CLI
 
@@ -173,6 +185,10 @@ Current behavior:
 
 - reads and parses `PLAN.md`,
 - loads step skills,
+- uses per-step prompt overrides stored in `PLAN.md`,
+- supports editing persisted step prompts before execution,
+- respects `per-step`, `per-agent`, and `auto` confirmation modes,
+- reads the plan file path from config,
 - executes incomplete steps through the orchestrator,
 - tracks task completion and updates `PLAN.md`,
 - renders team activity and a final summary.
@@ -195,7 +211,8 @@ It contains:
 - team configuration and backend settings,
 - build steps and task checklists,
 - per-agent prompts for each step,
-- constraints and coding guidelines.
+- constraints and coding guidelines,
+- verification notes and milestone updates.
 
 The parser is designed to ignore extra sections it does not understand so the document can be extended safely.
 
@@ -214,6 +231,9 @@ Current examples:
 ```bash
 # compile
 npx tsc -p tsconfig.json
+
+# run regression checks
+npm test
 
 # inspect commands
 node dist/cli.js --help
@@ -234,14 +254,14 @@ Major orchestration phases through Phase 10 are implemented.
 
 Reasonable next improvements now are:
 
-1. richer prompt editing in `run`,
-2. better retry/skip UX,
-3. more robust backend availability checks and diagnostics,
+1. richer multi-line prompt editing in `run`,
+2. better retry/skip UX and clearer abort handling,
+3. explicit backend preflight diagnostics surfaced from CLI commands,
 4. stronger plan generation heuristics and subtasks,
-5. automated tests for parser, orchestrator, and command flows.
+5. broader end-to-end and orchestrator command coverage.
 
 ## Contributing Notes
 
-If you continue work on this repository, treat the planning/orchestration foundation as present and focus on refinement, testing, and UX improvements rather than redoing Phase 2.
+If you continue work on this repository, treat the planning/orchestration foundation and prompt persistence flow as present and focus on refinement, diagnostics, broader testing, and UX improvements rather than redoing earlier phases.
 
 Keep `README.md` current after each completed task or milestone so contributors can trust the documented status without checking git history first.

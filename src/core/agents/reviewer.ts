@@ -2,7 +2,7 @@ import type { ParsedStep } from '../parser.js';
 import type { SharedContext } from '../orchestrator.js';
 import type { AgentDependencies, AgentRole } from './base.js';
 
-function buildPrompt(context: SharedContext, step: ParsedStep): string {
+function defaultPrompt(context: SharedContext, step: ParsedStep): string {
   return [
     '## Your Role: Reviewer',
     '## Step Goal',
@@ -25,6 +25,10 @@ function buildPrompt(context: SharedContext, step: ParsedStep): string {
     '  "tasks_completed": ["1.1", "1.2"]',
     '}'
   ].join('\n');
+}
+
+function buildPrompt(context: SharedContext, step: ParsedStep): string {
+  return step.agentPrompts.reviewer?.trim() || defaultPrompt(context, step);
 }
 
 export function createReviewerAgent({ backend }: AgentDependencies): AgentRole {

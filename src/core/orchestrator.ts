@@ -38,6 +38,7 @@ export interface OrchestratorEvents {
   onAgentComplete?: (role: AgentRoleName, context: SharedContext) => void;
   onStepComplete?: (step: ParsedStep, result: StepResult) => void;
   onStepFail?: (step: ParsedStep, result: StepResult) => void;
+  onBeforeAgentRun?: (role: AgentRoleName, context: SharedContext, step: ParsedStep) => Promise<'run' | 'skip' | 'quit'>;
 }
 
 function historyEntry(role: string, content: string): AgentMessage {
@@ -91,6 +92,15 @@ export class Orchestrator {
 
     let current = context;
     const runAgent = async (role: 'researcher' | 'architect' | 'executor' | 'reviewer'): Promise<void> => {
+      const action = await this.events.onBeforeAgentRun?.(role, current, step);
+      if (action === 'quit') {
+        throw new Error('run-aborted');
+      }
+      if (action === 'skip') {
+        current.history = [...current.history, historyEntry(role, 'Skipped by user.')];
+        return;
+      }
+
       this.events.onAgentStart?.(role, current);
       if (role === 'researcher') current = await researcher.run(current, step);
       if (role === 'architect') current = await architect.run(current, step);
@@ -102,8 +112,17 @@ export class Orchestrator {
     };
 
     while (current.attempt <= current.maxAttempts) {
-      for (const role of sequenceMap[this.teamMode]) {
-        await runAgent(role);
+      try {
+        for (const role of sequenceMap[this.teamMode]) {
+          await runAgent(role);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message === 'run-aborted') {
+          const result = { verdict: 'fail', context: { ...current, reviewerVerdict: 'fail', reviewerNotes: 'Run aborted by user.' } } as StepResult;
+          this.events.onStepFail?.(step, result);
+          return result;
+        }
+        throw error;
       }
 
       if (this.teamMode === 'solo') {
@@ -135,8 +154,17 @@ export class Orchestrator {
         ...current,
         attempt: current.attempt + 1
       };
-      await runAgent('executor');
-      await runAgent('reviewer');
+      try {
+        await runAgent('executor');
+        await runAgent('reviewer');
+      } catch (error) {
+        if (error instanceof Error && error.message === 'run-aborted') {
+          const result = { verdict: 'fail', context: { ...current, reviewerVerdict: 'fail', reviewerNotes: 'Run aborted by user.' } } as StepResult;
+          this.events.onStepFail?.(step, result);
+          return result;
+        }
+        throw error;
+      }
       if (current.reviewerVerdict !== 'retry') {
         const verdict = current.reviewerVerdict ?? 'pass';
         const result = { verdict, context: current } as StepResult;

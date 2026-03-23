@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { logDebug } from '../../../utils/logger.js';
 import type { AIBackend } from './claudeCode.js';
 import { createClaudeCodeBackend } from './claudeCode.js';
+import { getAvailabilityCommand } from './availability.js';
 
 const BACKEND_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -35,7 +36,8 @@ export function createCodexBackend(): AIBackend {
     name: 'codex',
     async isAvailable(): Promise<boolean> {
       try {
-        await execCommand('which', ['codex'], 10_000);
+        const command = getAvailabilityCommand('codex');
+        await execCommand(command.file, command.args, 10_000);
         return true;
       } catch {
         return false;

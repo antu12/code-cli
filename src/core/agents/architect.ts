@@ -2,7 +2,7 @@ import type { ParsedStep } from '../parser.js';
 import type { SharedContext } from '../orchestrator.js';
 import type { AgentDependencies, AgentRole } from './base.js';
 
-function buildPrompt(context: SharedContext): string {
+function defaultPrompt(context: SharedContext): string {
   return [
     '## Your Role: Architect',
     '## Step Goal',
@@ -21,11 +21,15 @@ function buildPrompt(context: SharedContext): string {
   ].join('\n');
 }
 
+function buildPrompt(context: SharedContext, step: ParsedStep): string {
+  return step.agentPrompts.architect?.trim() || defaultPrompt(context);
+}
+
 export function createArchitectAgent({ backend }: AgentDependencies): AgentRole {
   return {
     role: 'architect',
-    async run(context: SharedContext, _step: ParsedStep): Promise<SharedContext> {
-      const output = await backend.run(buildPrompt(context));
+    async run(context: SharedContext, step: ParsedStep): Promise<SharedContext> {
+      const output = await backend.run(buildPrompt(context, step));
       return { ...context, architectOutput: output };
     }
   };

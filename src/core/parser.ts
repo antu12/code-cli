@@ -79,7 +79,7 @@ function parseAgentPrompts(stepBlock: string): ParsedStep['agentPrompts'] {
     }
 
     const role = match[1].toLowerCase() as keyof ParsedStep['agentPrompts'];
-    promptMap[role] = match[2];
+    promptMap[role] = match[2].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
   }
 
   return promptMap;
@@ -179,35 +179,82 @@ async function updatePlanContent(
   }
 }
 
+function getStepRange(current: string, stepIndex: number): { start: number; end: number; content: string } | null {
+  const headingRegex = new RegExp(`^### Step ${stepIndex}:\\s+.+$`, 'm');
+  const headingMatch = headingRegex.exec(current);
+
+  if (!headingMatch || headingMatch.index === undefined) {
+    return null;
+  }
+
+  const start = headingMatch.index;
+  const afterStart = current.slice(start + headingMatch[0].length + 1);
+  const nextStepOffset = afterStart.search(/^### Step \d+:/m);
+  const end = nextStepOffset === -1 ? current.length : start + headingMatch[0].length + 1 + nextStepOffset;
+
+  return {
+    start,
+    end,
+    content: current.slice(start, end)
+  };
+}
+
 export async function markTaskComplete(stepIndex: number, taskId: string, planFile = DEFAULT_PLAN_FILE): Promise<void> {
   await updatePlanContent((current) => {
-    const stepRegex = new RegExp(`(### Step ${stepIndex}:\\s+.+?\\n[\\s\\S]*?)(?=^### Step \\d+:|$)`, 'm');
-    const stepMatch = stepRegex.exec(current);
+    const stepRange = getStepRange(current, stepIndex);
 
-    if (!stepMatch) {
+    if (!stepRange) {
       return null;
     }
 
-    const updatedStep = stepMatch[1].replace(
+    const updatedStep = stepRange.content.replace(
       new RegExp(`^-\\s+\\[ \\]\\s+${taskId.replace('.', '\\.')}\\s+`, 'm'),
       `- [x] ${taskId} `
     );
 
-    return `${current.slice(0, stepMatch.index)}${updatedStep}${current.slice(stepMatch.index + stepMatch[1].length)}`;
+    return `${current.slice(0, stepRange.start)}${updatedStep}${current.slice(stepRange.end)}`;
   }, planFile);
 }
 
 export async function markStepComplete(stepIndex: number, planFile = DEFAULT_PLAN_FILE): Promise<void> {
   await updatePlanContent((current) => {
-    const stepRegex = new RegExp(`(### Step ${stepIndex}:\\s+.+?\\n[\\s\\S]*?)(?=^### Step \\d+:|$)`, 'm');
-    const stepMatch = stepRegex.exec(current);
+    const stepRange = getStepRange(current, stepIndex);
 
-    if (!stepMatch) {
+    if (!stepRange) {
       return null;
     }
 
-    const updatedStep = stepMatch[1].replace(/-\s+\[ \]\s+/g, '- [x] ');
-    return `${current.slice(0, stepMatch.index)}${updatedStep}${current.slice(stepMatch.index + stepMatch[1].length)}`;
+    const updatedStep = stepRange.content.replace(/-\s+\[ \]\s+/g, '- [x] ');
+    return `${current.slice(0, stepRange.start)}${updatedStep}${current.slice(stepRange.end)}`;
+  }, planFile);
+}
+
+export async function updateAgentPrompt(
+  stepIndex: number,
+  role: keyof ParsedStep['agentPrompts'],
+  prompt: string,
+  planFile = DEFAULT_PLAN_FILE
+): Promise<void> {
+  await updatePlanContent((current) => {
+    const stepRange = getStepRange(current, stepIndex);
+
+    if (!stepRange) {
+      return null;
+    }
+
+    const roleName = `${role.charAt(0).toUpperCase()}${role.slice(1)}`;
+    const escapedRole = roleName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedPrompt = prompt.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const lineRegex = new RegExp(`(^-\\s+.+?\\s+${escapedRole}:\\s+)"([\\s\\S]*?)"(\\s*$)`, 'm');
+
+    if (!lineRegex.test(stepRange.content)) {
+      return null;
+    }
+
+    const updatedStep = stepRange.content.replace(lineRegex, (_match, prefix: string, _existing: string, suffix: string) => {
+      return `${prefix}"${escapedPrompt}"${suffix}`;
+    });
+    return `${current.slice(0, stepRange.start)}${updatedStep}${current.slice(stepRange.end)}`;
   }, planFile);
 }
 
